@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arabic Letters and Sounds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Scheherazade+New:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --bg:#F3F4F1; --surface:#FFFFFF; --ink:#13213A; --ink-2:#4A5568; --muted:#5A6578;
+  --line:#D5DAE1; --hover:#EEF0F3; --dots:rgba(19,33,58,.085);
+  --accent:#F0A83A;
+  --screen:#0A1322; --on-ink:#F3F4F1; --on-ink-muted:#9AA6BA;
+  --sans:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --arabic:"Scheherazade New", "Scheherazade", "Noto Naskh Arabic", "Geeza Pro", "Traditional Arabic", serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html:has(.shapes[open]){overflow:hidden}
+body{margin:0;background-color:var(--bg);background-image:radial-gradient(var(--dots) 1px,transparent 1.3px);background-size:22px 22px;color:var(--ink);font-family:var(--sans)}
+button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.ar{font-family:var(--arabic)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:clamp(28px,5vw,64px) clamp(16px,4vw,48px) 72px;display:flex;flex-direction:column;gap:clamp(24px,4vw,44px)}
+
+/* header */
+.head{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
+.pill{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;background:var(--accent);color:var(--ink);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.head h1{margin:0;font-size:clamp(34px,5vw,60px);line-height:1.02;font-weight:800;letter-spacing:-.025em;color:var(--ink);text-wrap:balance}
+.lede{margin:0;max-width:60ch;font-size:17px;line-height:1.55;color:var(--ink-2);text-wrap:pretty}
+.lede strong{white-space:nowrap;color:var(--ink);font-weight:700}
+.lede svg{width:18px;height:18px;vertical-align:-3px}
+
+/* the player beside the letters on wide screens */
+.layout{display:flex;align-items:stretch;gap:40px}
+.stage{flex:0 0 410px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-areas:"screen" "letter" "controls";align-content:start;gap:18px;padding:18px;border-radius:26px;background:var(--ink);color:var(--on-ink);box-shadow:0 28px 50px -30px rgba(19,33,58,.75)}
+.tiles{flex:1 1 0;min-width:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:12px;direction:rtl}
+
+/* video screen */
+.screen{position:relative;grid-area:screen;display:block;width:100%;aspect-ratio:228/154;padding:0;border:0;border-radius:16px;overflow:hidden;background:var(--screen);cursor:pointer}
+.video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;background:var(--screen)}
+.video::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+.scrim{position:absolute;inset:0;display:grid;place-items:center;background:rgba(10,19,34,.26);transition:opacity .2s ease}
+.stage.playing .scrim{opacity:0}
+.bigbtn{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--ink);box-shadow:0 12px 26px -10px rgba(0,0,0,.6);transition:transform .18s ease}
+.bigbtn svg{width:26px;height:26px}
+.screen:hover .bigbtn{transform:scale(1.06)}
+.bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(243,244,241,.16)}
+.bar i{display:block;width:0;height:100%;background:var(--accent);transition:width .25s linear}
+.spin{animation:spin .8s linear infinite}
+
+/* the letter that is playing */
+.letter{grid-area:letter;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.letter-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.count{font-size:13px;font-weight:600;letter-spacing:.08em;color:var(--on-ink-muted);font-variant-numeric:tabular-nums}
+.name{font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.01em;color:var(--on-ink)}
+.glyph-wrap{position:relative;display:grid;place-items:center;width:136px;height:136px;flex:none}
+.glyph-wrap::before{content:"";position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(243,244,241,.14);background:rgba(243,244,241,.04)}
+.ring{position:absolute;inset:6px;border-radius:50%;border:2px solid var(--accent);opacity:0;pointer-events:none}
+.stage.playing .ring{animation:ripple 1.6s cubic-bezier(.2,.6,.3,1) infinite}
+.stage.playing .ring.r2{animation-delay:.8s}
+.glyph{position:relative;display:block;font-size:84px;line-height:1;font-weight:500;color:var(--on-ink)}
+.pop-a{animation:pop-a .42s cubic-bezier(.2,.8,.2,1) both}
+.pop-b{animation:pop-b .42s cubic-bezier(.2,.8,.2,1) both}
+
+/* controls */
+.controls{grid-area:controls;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px}
+.play{flex:1 1 120px;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:10px;height:50px;padding:0 18px;border:0;border-radius:999px;background:var(--accent);color:var(--ink);cursor:pointer;transition:filter .15s ease,transform .15s ease}
+.play:active{transform:scale(.98)}
+.play .ic{display:grid}
+.play svg{width:20px;height:20px}
+.speed{flex:none;display:inline-flex;align-items:center;gap:2px;padding:2px 2px 2px 12px;border-radius:999px;border:1px solid rgba(243,244,241,.22)}
+.speed-l{margin-right:6px;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--on-ink-muted)}
+.speed button{min-width:46px;height:44px;padding:0 8px;border:0;border-radius:999px;background:transparent;cursor:pointer}
+.speed button[aria-pressed="true"]{background:var(--on-ink);color:var(--ink)}
+
+/* letter shapes: the button in the player, and its panel */
+.shapes-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;height:40px;margin-top:8px;padding:0 16px 0 13px;border:1px solid rgba(243,244,241,.3);border-radius:999px;background:transparent;white-space:nowrap;cursor:pointer;transition:background-color .15s ease,border-color .15s ease}
+.shapes-btn svg{width:16px;height:16px}
+.shapes{width:min(600px,calc(100vw - 32px));max-width:none;max-height:calc(100vh - 32px);margin:auto;padding:0;border:0;border-radius:26px;background:var(--surface);color:var(--ink);font-family:var(--sans);box-shadow:0 40px 80px -30px rgba(10,19,34,.65);overflow:auto}
+.shapes::backdrop{background:rgba(10,19,34,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.shapes[open]{animation:dlg-in .28s cubic-bezier(.2,.8,.2,1) both}
+.shapes-card{display:flex;flex-direction:column;gap:20px;padding:22px 24px 26px}
+.shapes-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.shapes-titles{display:flex;flex-direction:column;gap:4px;min-width:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.shapes-title{margin:0;font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+.close{flex:none;display:grid;place-items:center;width:44px;height:44px;margin:-6px -10px 0 0;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}
+.close svg{width:22px;height:22px}
+.close:focus-visible{outline-color:var(--ink)}
+.forms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;direction:rtl}
+.form{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:10px 6px 14px;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.form .ar{position:relative;display:block;width:100%;height:1.5em;font-size:72px;line-height:1.5;font-weight:600;text-align:center;white-space:nowrap}
+.form .ar::before{content:"";position:absolute;left:10%;right:10%;top:.903em;border-top:1.5px dashed rgba(19,33,58,.24)}
+.form .ar span{position:relative;top:-.17em}
+.form-l{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap}
+
+/* letter tiles */
+.tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:100%;min-height:96px;padding:8px 4px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background-color .18s ease}
+.tile:focus-visible{outline-color:var(--ink)}
+.tile[aria-current="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-ink);box-shadow:0 16px 28px -16px rgba(19,33,58,.7)}
+.tile .ar{position:relative;display:block;height:1.22em;font-size:46px;line-height:1.22;font-weight:600}
+.tile-name{font-size:13px;line-height:1.2;font-weight:600;color:var(--muted);white-space:nowrap}
+.tile[aria-current="true"] .tile-name{color:var(--accent)}
+.dot{position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 1px rgba(19,33,58,.22);opacity:0;transform:scale(.3);transition:opacity .2s ease,transform .2s ease}
+.tile.heard .dot{opacity:1;transform:none}
+
+@media (hover:hover){
+  .play:hover{filter:brightness(1.06)}
+  .speed button:hover{background:rgba(243,244,241,.08)}
+  .speed button[aria-pressed="true"]:hover{background:var(--on-ink)}
+  .tile:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:0 12px 22px -14px rgba(19,33,58,.5)}
+  .tile[aria-current="true"]:hover{transform:none}
+  .shapes-btn:hover{background:rgba(243,244,241,.08);border-color:rgba(243,244,241,.55)}
+  .close:hover{background:var(--hover)}
+}
+
+/* medium widths: the player on top, the letters below */
+@media (max-width:1099px){
+  .layout{flex-direction:column;gap:24px}
+  .stage{flex:none;max-width:760px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"screen letter" "screen controls";align-items:center;column-gap:22px;row-gap:14px}
+  .letter{flex-direction:column-reverse;justify-content:center;gap:4px;text-align:center}
+  .letter-meta{align-items:center}
+  .name{font-size:24px}
+  .glyph-wrap{width:120px;height:120px}
+  .glyph{font-size:74px}
+  .speed{padding:2px}
+  .speed-l{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .shapes-btn{align-self:center;margin-top:6px}
+  .tiles{grid-template-rows:none;grid-auto-rows:112px}
+}
+@media (min-width:600px) and (max-width:1099px) and (min-height:820px){
+  .stage{position:sticky;top:12px;z-index:5}
+}
+
+/* phones */
+@media (max-width:599px){
+  .layout{gap:16px}
+  .stage{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);grid-template-areas:"screen letter" "controls controls";column-gap:12px;row-gap:12px;padding:12px;border-radius:22px}
+  .screen{border-radius:12px}
+  .bigbtn{width:52px;height:52px}
+  .count{display:none}
+  .name{font-size:18px}
+  .glyph-wrap{width:88px;height:88px}
+  .glyph{font-size:52px}
+  .play{height:46px}
+  .speed button{min-width:46px;height:40px}
+  .tiles{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:98px;gap:8px}
+  .tile{border-radius:14px;min-height:0}
+  .tile .ar{font-size:40px}
+  .shapes-btn{height:36px;margin-top:4px;padding:0 12px 0 10px;gap:6px}
+  .shapes{width:calc(100vw - 24px);border-radius:22px}
+  .shapes-card{gap:16px;padding:18px 14px 18px}
+  .shapes-title{font-size:24px}
+  .forms{gap:6px}
+  .form{padding:6px 2px 10px;border-radius:14px}
+  .form .ar{font-size:46px}
+  .form-l{font-size:12px}
+}
+@media (max-width:599px) and (min-height:560px){
+  .stage{position:sticky;top:8px;z-index:5}
+}
+
+@keyframes ripple{0%{transform:scale(.86);opacity:.75}100%{transform:scale(1.24);opacity:0}}
+@keyframes pop-a{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes pop-b{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes dlg-in{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <span class="pill">Listening Exercise 1</span>
+    <h1>Arabic Letters and Sounds</h1>
+    <p class="lede">Click each letter to see and hear its pronunciation. Remember to read from <strong>right to left <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg></strong></p>
+  </header>
+
+  <main class="layout">
+    <section class="stage" id="stage" aria-label="Pronunciation video">
+      <button type="button" class="screen" id="screen" aria-label="Play alif">
+        <video class="video" id="video" preload="none" poster="media/01-alif.jpg" playsinline webkit-playsinline aria-hidden="true"></video>
+        <span class="scrim" aria-hidden="true"><span class="bigbtn" id="bigIcon"></span></span>
+        <span class="bar" aria-hidden="true"><i id="bar"></i></span>
+      </button>
+      <div class="letter">
+        <div class="letter-meta">
+          <span class="count" id="count">01 / 28</span>
+          <span class="name" id="name" dir="ltr">alif</span>
+          <button type="button" class="shapes-btn" id="shapesBtn" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l4.5-1L19 8.5 15.5 5 5 15.5 4 20z"/><path d="M13.5 7l3.5 3.5"/></svg><span>Letter shapes</span></button>
+        </div>
+        <div class="glyph-wrap">
+          <span class="ring" aria-hidden="true"></span>
+          <span class="ring r2" aria-hidden="true"></span>
+          <span class="glyph ar pop-a" id="glyph" lang="ar" dir="rtl" style="top:0.023em">ا</span>
+        </div>
+      </div>
+      <div class="controls">
+        <button type="button" class="play" id="play"><span class="ic" id="playIcon"></span><span id="playLabel">Play</span></button>
+        <div class="speed" id="speed" role="group" aria-label="Playback speed"><span class="speed-l" aria-hidden="true">Speed</span></div>
+      </div>
+    </section>
+
+    <section class="tiles" id="tiles" aria-label="Arabic letters"></section>
+  </main>
+</div>
+
+<dialog class="shapes" id="shapes" aria-label="Letter shapes: alif">
+  <div class="shapes-card">
+    <div class="shapes-head">
+      <div class="shapes-titles">
+        <span class="eyebrow">Letter shapes</span>
+        <h2 class="shapes-title" id="shapesTitle" dir="ltr">alif</h2>
+      </div>
+      <button type="button" class="close" id="shapesClose" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg></button>
+    </div>
+    <div class="forms" id="forms"></div>
+  </div>
+</dialog>
+
+<script>
+/* One row per letter: [letter, name]. Each letter's video and poster live in media/,
+   named after its place in the alphabet and its name: media/06-Haa.mp4, media/06-Haa.jpg. */
+const LETTERS = [
+  ["ا", "alif"], ["ب", "baa"], ["ت", "taa"], ["ث", "thaa"], ["ج", "jeem"], ["ح", "Haa"], ["خ", "khaa"],
+  ["د", "daal"], ["ذ", "dhaal"], ["ر", "raa"], ["ز", "zaay"], ["س", "seen"], ["ش", "sheen"], ["ص", "Saad"],
+  ["ض", "Daad"], ["ط", "Taa"], ["ظ", "THaa"], ["ع", "'ayn"], ["غ", "ghayn"], ["ف", "faa"], ["ق", "qaaf"],
+  ["ك", "kaaf"], ["ل", "laam"], ["م", "meem"], ["ن", "noon"], ["ه", "haa"], ["و", "waaw"], ["ي", "yaa"]
+];
+// Vertical nudge (em) that centres each Scheherazade New letter in its box, measured from the font's outlines.
+const NUDGE = [0.023, -0.239, -0.101, -0.031, -0.429, -0.429, -0.329, -0.112, -0.011, -0.340, -0.238, -0.333, -0.165, -0.310,
+  -0.241, 0.049, 0.049, -0.339, -0.242, 0.054, -0.037, 0.059, -0.016, -0.364, -0.200, -0.142, -0.322, -0.284];
+const ITEMS = LETTERS.map(([ar, name], i) => {
+  const num = String(i + 1).padStart(2, "0");
+  const file = "media/" + num + "-" + name.replace(/[^A-Za-z]/g, "");
+  return { i, ar, name, num, dy: NUDGE[i] + "em", video: file + ".mp4", poster: file + ".jpg" };
+});
+const SPEEDS = [1, 0.75, 0.5];
+
+// The four written forms. Six letters (ا د ذ ر ز و) never join the letter after them.
+const TATWEEL = "ـ";
+function forms(ar){
+  const joins = !"ادذرزو".includes(ar);
+  return [["Alone", ar], ["Beginning", joins ? ar + TATWEEL : ar], ["Middle", TATWEEL + ar + (joins ? TATWEEL : "")], ["End", TATWEEL + ar]];
+}
+
+/* ---------- little builders ---------- */
+function el(tag, cls, text){ const n = document.createElement(tag); if(cls) n.className = cls; if(text != null) n.textContent = text; return n; }
+function arSpan(text, cls){ const s = el("span", "ar" + (cls ? " " + cls : ""), text); s.lang = "ar"; s.dir = "rtl"; return s; }
+const $ = id => document.getElementById(id);
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.6v12.8a1 1 0 0 0 1.53.85l10.1-6.4a1 1 0 0 0 0-1.7L9.53 4.75A1 1 0 0 0 8 5.6z" fill="currentColor"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>',
+  replay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 3.5V8H8"/></svg>',
+  loading: '<svg class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 1-9 9"/></svg>',
+  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><path d="M12 16.5h.01"/></svg>'
+};
+// What the play button shows in each state: [icon, label]. The big button on the video shows the same icon, and none while playing.
+const BUTTON = { idle: ["play", "Play"], paused: ["play", "Play"], playing: ["pause", "Pause"], ended: ["replay", "Play again"], loading: ["loading", "Loading"], error: ["error", "Try again"] };
+
+/* ---------- state ---------- */
+const state = { current: 0, status: "idle", progress: 0, rate: 1, heard: new Set(), pop: false };
+try { const v = Number(localStorage.getItem("letters-speed")); if(SPEEDS.includes(v)) state.rate = v; } catch(e){}
+
+const stage = $("stage"), screenBtn = $("screen"), video = $("video"), bigIcon = $("bigIcon"), bar = $("bar"),
+      count = $("count"), nameEl = $("name"), glyph = $("glyph"), playBtn = $("play"), playIcon = $("playIcon"),
+      playLabel = $("playLabel"), speedBox = $("speed");
+
+/* ---------- letters ---------- */
+const tiles = ITEMS.map(it => {
+  const t = el("button", "tile");
+  t.type = "button";
+  t.setAttribute("aria-label", "Play " + it.name);
+  const dot = el("span", "dot");
+  dot.setAttribute("aria-hidden", "true");
+  const ar = arSpan(it.ar);
+  ar.style.top = it.dy;
+  const nm = el("span", "tile-name", it.name);
+  nm.dir = "ltr";
+  t.append(dot, ar, nm);
+  t.addEventListener("click", () => start(it.i));
+  $("tiles").appendChild(t);
+  return t;
+});
+
+const speedBtns = SPEEDS.map(v => {
+  const b = el("button", "", v + "×");
+  b.type = "button";
+  b.setAttribute("aria-label", v === 1 ? "Normal speed" : "Slower: " + v + " times");
+  b.addEventListener("click", () => setRate(v));
+  speedBox.appendChild(b);
+  return b;
+});
+
+/* ---------- video ----------
+   One <video> plays every letter: a tap loads that letter's clip (a few hundred KB) and plays it.
+   Every play() runs inside the tap itself, which is what lets phones play it with sound. */
+let loaded = -1, playToken = 0;
+try { if(navigator.audioSession) navigator.audioSession.type = "playback"; } catch(e){}
+video.playsInline = true;
+video.addEventListener("play", () => {
+  if(video.playbackRate !== state.rate) video.playbackRate = state.rate;   // iOS can drop a rate set before play()
+  setStatus(video.readyState >= 3 ? "playing" : "loading");
+});
+video.addEventListener("playing", () => setStatus("playing"));
+video.addEventListener("waiting", () => { if(!video.paused) setStatus("loading"); });
+video.addEventListener("pause", () => { if(!video.ended && !video.error) setStatus("paused"); });   // a failed load fires "pause" right after "error"
+video.addEventListener("ended", () => { state.progress = 1; syncProgress(); setStatus("ended"); });
+video.addEventListener("timeupdate", () => {
+  const d = video.duration;
+  if(d && isFinite(d)){ state.progress = Math.min(1, video.currentTime / d); syncProgress(); }
+});
+video.addEventListener("error", () => { if(video.getAttribute("src")) setStatus("error"); });
+
+function tryPlay(){
+  const token = ++playToken;
+  let p = null;
+  try { p = video.play(); } catch(e){ p = null; }
+  if(p && p.catch) p.catch(err => {
+    if(token !== playToken || (err && err.name === "AbortError")) return;   // a newer tap took over
+    setStatus(video.error ? "error" : "paused");
+  });
+  if(!video.paused && video.readyState >= 3) setStatus("playing");
+}
+function start(i){
+  const it = ITEMS[i];
+  if(!it) return;
+  const prev = state.current;
+  state.current = i;
+  state.status = "loading";
+  state.progress = 0;
+  state.heard.add(i);
+  if(i !== prev) state.pop = !state.pop;   // swapping the class replays the letter's pop-in
+  if(loaded !== i || video.error){
+    video.poster = it.poster;
+    video.src = it.video;
+    loaded = i;
+  } else {
+    try { video.currentTime = 0; } catch(e){}
+  }
+  video.defaultPlaybackRate = state.rate;
+  video.playbackRate = state.rate;
+  syncLetter(); syncStatus(); syncProgress();
+  tryPlay();
+}
+function toggle(){
+  const cur = state.current;
+  if(loaded !== cur || video.error){ start(cur); return; }   // nothing loaded yet, or "Try again" after an error
+  if(video.paused || video.ended){
+    if(video.ended){ try { video.currentTime = 0; } catch(e){} }
+    video.playbackRate = state.rate;
+    state.heard.add(cur);
+    state.status = "loading";
+    syncLetter(); syncStatus();
+    tryPlay();
+  } else {
+    video.pause();
+  }
+}
+function setRate(r){
+  state.rate = r;
+  video.defaultPlaybackRate = r;
+  video.playbackRate = r;
+  try { localStorage.setItem("letters-speed", String(r)); } catch(e){}
+  syncSpeed();
+}
+function setStatus(s){ if(state.status !== s){ state.status = s; syncStatus(); } }
+
+/* ---------- drawing ---------- */
+function syncLetter(){
+  const it = ITEMS[state.current];
+  count.textContent = it.num + " / " + ITEMS.length;
+  nameEl.textContent = it.name;
+  glyph.textContent = it.ar;
+  glyph.style.top = it.dy;
+  glyph.classList.toggle("pop-a", !state.pop);
+  glyph.classList.toggle("pop-b", state.pop);
+  tiles.forEach((t, i) => {
+    t.setAttribute("aria-current", i === state.current ? "true" : "false");
+    t.classList.toggle("heard", state.heard.has(i));
+  });
+}
+function syncStatus(){
+  const s = state.status, playing = s === "playing", [icon, label] = BUTTON[s];
+  stage.classList.toggle("playing", playing);
+  screenBtn.setAttribute("aria-label", (playing ? "Pause " : "Play ") + ITEMS[state.current].name);
+  bigIcon.innerHTML = playing ? "" : ICON[icon];
+  playIcon.innerHTML = ICON[icon];
+  playLabel.textContent = label;
+}
+function syncProgress(){ bar.style.width = Math.round(state.progress * 1000) / 10 + "%"; }
+function syncSpeed(){ speedBtns.forEach((b, k) => b.setAttribute("aria-pressed", SPEEDS[k] === state.rate ? "true" : "false")); }
+
+screenBtn.addEventListener("click", toggle);
+playBtn.addEventListener("click", toggle);
+
+/* ---------- letter shapes ---------- */
+const dialog = $("shapes");
+let lastFocus = null;
+$("shapesBtn").addEventListener("click", e => {
+  const it = ITEMS[state.current];
+  lastFocus = e.currentTarget;
+  $("shapesTitle").textContent = it.name;
+  dialog.setAttribute("aria-label", "Letter shapes: " + it.name);
+  const box = $("forms");
+  box.innerHTML = "";
+  forms(it.ar).forEach(([label, text]) => {
+    const f = el("div", "form"), ar = arSpan();
+    ar.appendChild(el("span", "", text));
+    f.append(ar, el("span", "form-l", label));
+    box.appendChild(f);
+  });
+  if(!dialog.open){ try { dialog.showModal(); } catch(err){ dialog.setAttribute("open", ""); } }
+});
+function closeShapes(){
+  if(!dialog.open) return;
+  if(typeof dialog.close === "function") dialog.close(); else dialog.removeAttribute("open");
+}
+$("shapesClose").addEventListener("click", closeShapes);
+dialog.addEventListener("click", e => { if(e.target === dialog) closeShapes(); });   // a click on the dimmed area lands on the dialog itself
+dialog.addEventListener("close", () => { if(lastFocus && lastFocus.isConnected) try { lastFocus.focus(); } catch(e){} });
+
+window.__playerState = () => ({ letter: ITEMS[state.current].name, status: state.status, rate: state.rate, playbackRate: video.playbackRate,
+  src: video.getAttribute("src"), paused: video.paused, time: video.currentTime, progress: state.progress, heard: [...state.heard] });
+
+syncLetter(); syncStatus(); syncProgress(); syncSpeed();
+</script>
+</body>
+</html>
